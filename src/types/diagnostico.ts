@@ -31,6 +31,16 @@ export interface SolucaoRecomendada {
   valor_manutencao_mensal: string
   prioridade: number
   modulo_aios: string
+  entregaveis?: string
+  fase_roadmap?: string
+}
+
+export interface InvestimentoTotal {
+  implementacao_minimo: string
+  implementacao_maximo: string
+  mensal_minimo: string
+  mensal_maximo: string
+  pacote_sugerido: string
 }
 
 export interface AnaliseIA {
@@ -40,7 +50,9 @@ export interface AnaliseIA {
   cruzamento_diretoria_equipe: string
   solucoes: SolucaoRecomendada[]
   roadmap_sugerido: string
+  investimento_total?: InvestimentoTotal
   roi_estimado: string
+  proximos_passos?: string[]
 }
 
 export interface Pergunta {

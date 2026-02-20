@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AnaliseIA, SolucaoRecomendada } from '@/types/diagnostico'
 
@@ -12,6 +12,30 @@ function BadgeAplicabilidade({ nivel }: { nivel: string }) {
 function BadgeComplexidade({ nivel }: { nivel: string }) {
   const cls = nivel === 'Baixa' ? 'badge-alta' : nivel === 'Média' ? 'badge-media' : 'badge-baixa'
   return <span className={`badge-sm ${cls}`}>Cx: {nivel}</span>
+}
+
+function BadgeFase({ fase }: { fase?: string }) {
+  if (!fase) return null
+  const cores: Record<string, string> = {
+    'Fase 1': '#dcfce7',
+    'Fase 2': '#dbeafe',
+    'Fase 3': '#fef3c7',
+    'Fase 4': '#f3e8ff',
+  }
+  const coresTxt: Record<string, string> = {
+    'Fase 1': '#166534',
+    'Fase 2': '#1e40af',
+    'Fase 3': '#92400e',
+    'Fase 4': '#6b21a8',
+  }
+  return (
+    <span
+      className="badge-sm"
+      style={{ background: cores[fase] || '#f1f5f9', color: coresTxt[fase] || '#475569' }}
+    >
+      {fase}
+    </span>
+  )
 }
 
 function SolucaoCard({ solucao }: { solucao: SolucaoRecomendada }) {
@@ -27,19 +51,25 @@ function SolucaoCard({ solucao }: { solucao: SolucaoRecomendada }) {
         <div className="solution-badges">
           <BadgeAplicabilidade nivel={solucao.aplicabilidade} />
           <BadgeComplexidade nivel={solucao.complexidade} />
+          <BadgeFase fase={solucao.fase_roadmap} />
         </div>
       </div>
 
       <p style={{ fontSize: '0.9rem', color: 'var(--text)', marginBottom: 8 }}>
         {solucao.descricao}
       </p>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-        Dor identificada: {solucao.dor_identificada}
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', fontStyle: 'italic', marginBottom: 4 }}>
+        Dor: {solucao.dor_identificada}
       </p>
+      {solucao.entregaveis && (
+        <p style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 500 }}>
+          Entregaveis: {solucao.entregaveis}
+        </p>
+      )}
 
       <div className="solution-meta">
         <div className="meta-item">
-          <span className="meta-label">Módulo AIOS</span>
+          <span className="meta-label">Modulo AIOS</span>
           <span className="meta-value">{solucao.modulo_aios}</span>
         </div>
         <div className="meta-item">
@@ -47,11 +77,11 @@ function SolucaoCard({ solucao }: { solucao: SolucaoRecomendada }) {
           <span className="meta-value">{solucao.tempo_estimado}</span>
         </div>
         <div className="meta-item">
-          <span className="meta-label">Implementação</span>
+          <span className="meta-label">Implementacao</span>
           <span className="meta-value">{solucao.valor_implementacao}</span>
         </div>
         <div className="meta-item">
-          <span className="meta-label">Manutenção/mês</span>
+          <span className="meta-label">Manutencao/mes</span>
           <span className="meta-value">{solucao.valor_manutencao_mensal}</span>
         </div>
       </div>
@@ -59,7 +89,7 @@ function SolucaoCard({ solucao }: { solucao: SolucaoRecomendada }) {
   )
 }
 
-export default function RelatorioPage() {
+function RelatorioContent() {
   const searchParams = useSearchParams()
   const empresaId = searchParams.get('empresa_id')
   const [analise, setAnalise] = useState<AnaliseIA | null>(null)
@@ -95,10 +125,10 @@ export default function RelatorioPage() {
         setAnalise(data.analise)
         setDataAnalise(data.created_at || new Date().toISOString())
       } else {
-        setErro('Nenhuma análise encontrada. Gere uma análise primeiro.')
+        setErro('Nenhuma analise encontrada. Gere uma analise primeiro.')
       }
     } catch {
-      setErro('Erro ao carregar análise')
+      setErro('Erro ao carregar analise')
     }
     setLoading(false)
   }
@@ -107,7 +137,7 @@ export default function RelatorioPage() {
     return (
       <div className="loading-container">
         <div className="spinner" />
-        <p>Carregando relatório...</p>
+        <p>Carregando relatorio...</p>
       </div>
     )
   }
@@ -132,22 +162,23 @@ export default function RelatorioPage() {
   const solucoesOrdenadas = [...(analise.solucoes || [])].sort((a, b) => a.prioridade - b.prioridade)
   const quickWins = solucoesOrdenadas.filter(s => s.aplicabilidade === 'Alta' && s.complexidade === 'Baixa')
   const totalImplementacao = solucoesOrdenadas.length
+  const inv = analise.investimento_total
 
   return (
     <div className="container-wide">
-      {/* Header do Relatório */}
+      {/* Header */}
       <div className="report-header">
         <p style={{ opacity: 0.7, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          Relatório de Diagnóstico Empresarial
+          Relatorio de Diagnostico Empresarial — Powered by Claude AI
         </p>
         <h1>{empresaNome}</h1>
         <p>
           Gerado em {new Date(dataAnalise).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-          {' '} | {totalImplementacao} soluções recomendadas | {quickWins.length} quick wins identificados
+          {' '} | {totalImplementacao} solucoes recomendadas | {quickWins.length} quick wins
         </p>
       </div>
 
-      {/* Botões */}
+      {/* Botoes */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
         <a href="/admin/respostas" style={{ textDecoration: 'none' }}>
           <button className="btn btn-secondary" style={{ padding: '10px 20px', fontSize: '0.85rem' }}>
@@ -180,24 +211,24 @@ export default function RelatorioPage() {
         <h2>Principais Dores Identificadas</h2>
         <ul style={{ paddingLeft: 20 }}>
           {analise.principais_dores?.map((dor, i) => (
-            <li key={i} style={{ marginBottom: 8, fontSize: '0.95rem', lineHeight: 1.6 }}>
+            <li key={i} style={{ marginBottom: 10, fontSize: '0.95rem', lineHeight: 1.6 }}>
               {dor}
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Cruzamento Diretoria × Equipe */}
+      {/* Cruzamento */}
       <div className="report-section">
         <h2>Cruzamento Diretoria x Equipe</h2>
         <p style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>{analise.cruzamento_diretoria_equipe}</p>
       </div>
 
-      {/* Soluções Recomendadas */}
+      {/* Solucoes Recomendadas */}
       <div className="report-section">
-        <h2>Soluções Recomendadas ({solucoesOrdenadas.length})</h2>
+        <h2>Solucoes Recomendadas ({solucoesOrdenadas.length})</h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 20 }}>
-          Ordenadas por prioridade de implementação (quick wins primeiro)
+          Ordenadas por prioridade. Quick wins primeiro para gerar valor rapido.
         </p>
 
         {solucoesOrdenadas.map(solucao => (
@@ -207,25 +238,25 @@ export default function RelatorioPage() {
 
       {/* Roadmap */}
       <div className="report-section">
-        <h2>Roadmap Sugerido</h2>
-        <p style={{ fontSize: '0.95rem', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+        <h2>Roadmap de Implementacao</h2>
+        <p style={{ fontSize: '0.95rem', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
           {analise.roadmap_sugerido}
         </p>
       </div>
 
-      {/* ROI Estimado */}
+      {/* ROI */}
       <div className="report-section">
         <h2>ROI Estimado</h2>
         <p style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>{analise.roi_estimado}</p>
       </div>
 
-      {/* Resumo de Valores */}
+      {/* Investimento Total */}
       <div className="report-section" style={{ background: '#f0f9ff', border: '2px solid var(--primary)' }}>
         <h2>Resumo Financeiro</h2>
-        <div className="stats-grid" style={{ marginBottom: 0 }}>
+        <div className="stats-grid">
           <div className="stat-card" style={{ textAlign: 'center' }}>
-            <div className="stat-value" style={{ fontSize: '1.5rem' }}>{solucoesOrdenadas.length}</div>
-            <div className="stat-label">Soluções Totais</div>
+            <div className="stat-value" style={{ fontSize: '1.5rem' }}>{totalImplementacao}</div>
+            <div className="stat-label">Solucoes Totais</div>
           </div>
           <div className="stat-card" style={{ textAlign: 'center' }}>
             <div className="stat-value" style={{ fontSize: '1.5rem', color: 'var(--secondary)' }}>
@@ -240,13 +271,70 @@ export default function RelatorioPage() {
             <div className="stat-label">Alta Aplicabilidade</div>
           </div>
         </div>
+
+        {inv && (
+          <div style={{ marginTop: 16 }}>
+            <div className="stats-grid" style={{ marginBottom: 16 }}>
+              <div className="stat-card">
+                <div className="stat-label">Implementacao Total</div>
+                <div style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: 4 }}>
+                  {inv.implementacao_minimo} — {inv.implementacao_maximo}
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Manutencao Mensal</div>
+                <div style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: 4 }}>
+                  {inv.mensal_minimo} — {inv.mensal_maximo}/mes
+                </div>
+              </div>
+            </div>
+            {inv.pacote_sugerido && (
+              <div style={{
+                background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8,
+                padding: 16, fontSize: '0.9rem', lineHeight: 1.6,
+              }}>
+                <strong style={{ color: '#065f46' }}>Pacote Sugerido:</strong>{' '}
+                {inv.pacote_sugerido}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Proximos Passos */}
+      {analise.proximos_passos && analise.proximos_passos.length > 0 && (
+        <div className="report-section" style={{ background: '#fffbeb', border: '2px solid var(--accent)' }}>
+          <h2>Proximos Passos</h2>
+          <ol style={{ paddingLeft: 20 }}>
+            {analise.proximos_passos.map((passo, i) => (
+              <li key={i} style={{ marginBottom: 8, fontSize: '0.95rem', lineHeight: 1.6 }}>
+                {passo}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Footer */}
       <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-light)', fontSize: '0.8rem' }}>
-        <p>Relatório gerado por Diagnóstico Empresarial AIOS</p>
-        <p>Consultoria em Transformação Digital</p>
+        <p>Relatorio gerado por Diagnostico Empresarial AIOS</p>
+        <p>Analise realizada por Claude AI (Anthropic) — Consultoria em Transformacao Digital</p>
       </div>
     </div>
+  )
+}
+
+export default function RelatorioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="loading-container">
+          <div className="spinner" />
+          <p>Carregando...</p>
+        </div>
+      }
+    >
+      <RelatorioContent />
+    </Suspense>
   )
 }
